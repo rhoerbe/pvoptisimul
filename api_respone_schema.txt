@@ -1,0 +1,25 @@
+{
+  "status": "ok",
+  "response": {
+    "timestamps": [some kind of interval]
+    "values": [PV Prod Gesamt]
+    "kbox": "some value",
+    "version": "3.0",
+    "missing_data": [empty],
+    "control": [ empty ],
+    "eco_mode": [empty],
+    "production": [empty],
+    "resolution": "d",
+    "price_information": null,
+    "values_2": []
+    "values_2_ex": [Netzbezug],
+    "auto_consumption" (or "values_pvo_auto"): [Eigenverbrauch]
+    "values_sold": [unused]
+    "start": epoc_time,
+    "end": epoc_time,
+    "total_pv_production": 63867.98000000001,
+    "total_home_consumption": 328276.48999999993,
+    "self_consumption_sold_percent": 37,
+    "autonomy_solar_percent": 12
+  }
+}
