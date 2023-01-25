@@ -6,24 +6,23 @@ from pathlib import Path
 
 
 basepath = Path(r"data")
-INPATH = Path(basepath) / "timeseries.json"
+INPATH = Path(basepath) / "grab.json"
 OUTPATH = Path(basepath) / "timeseries.xlsx"
 
 def main():
     with open(INPATH) as fh:
         api_result = json.load(fh)
         start_epoc = api_result['response']['start'] / 1000
-        timestamp_offset = int(api_result['response']['timestamps'][0])
         subset = make_subset_with_pretty_names(api_result)
         df = pd.DataFrame.from_dict(subset)
-        df = compute_timestamp(df, start_epoc, timestamp_offset)
+        df = compute_timestamp(df, start_epoc, api_result)
         df = round_and_scale_kWh(df)
         aggregate_and_write_excel(df)
         # reporting -----------
         start = datetime.fromtimestamp(start_epoc).isoformat()
         end = datetime.fromtimestamp(api_result['response']['end'] / 1000).isoformat()
         resolution = api_result['response']['resolution']
-        count = df['timestamp_utc'].count()
+        count = df['timestamps_utc'].count()
         missing = df['missing_data'].count()
         print(F"start: {start}, end: {end}")
         print(F"resolution: {resolution}")
@@ -32,7 +31,10 @@ def main():
 
 def make_subset_with_pretty_names(api_result: dict) -> dict:
     subset = dict()
-    subset['timestamp_utc'] = api_result['response']['timestamps']
+    try:
+        subset['timestamps_utc'] = api_result['response']['timestamps_utc']
+    except KeyError:
+        pass
     subset['missing_data'] = api_result['response']['missing_data']
     subset['PV_Produktion'] = api_result['response']['values']
     subset['Netzbezug'] = api_result['response']['values_2_ex']
@@ -43,12 +45,19 @@ def make_subset_with_pretty_names(api_result: dict) -> dict:
     return subset
 
 
-def compute_timestamp(df: pd.DataFrame, start: int, timestamp_offset: int) -> pd.DataFrame:
-    df['timestamp_utc'].astype(int)
-    df.loc[:, 'timestamp_utc'] -= timestamp_offset  # deduct joulie counter offset
-    df.loc[:, 'timestamp_utc'] *= 300  # set interval steps to 5 min
-    df.loc[:, 'timestamp_utc'] += start # compute unix_epoc
-    df['timestamp_utc'] = pd.to_datetime(df['timestamp_utc'], unit='s')
+def compute_timestamp(df: pd.DataFrame, start: int, api_result: dict) -> pd.DataFrame:
+    if 'timestamps_utc' in df.columns:
+        # timestamps already set by grab_data.py
+        pass
+    else:
+        # timestamps as returned by the API with weird counter offset -> correct it
+        df['timestamps_utc'] = api_result['response']['timestamps']
+        timestamp_offset = int(api_result['response']['timestamps'][0])
+        df['timestamps_utc'].astype(int)
+        df.loc[:, 'timestamps_utc'] -= timestamp_offset  # deduct joulie counter offset
+        df.loc[:, 'timestamps_utc'] *= 300  # set interval steps to 5 min
+        df.loc[:, 'timestamps_utc'] += start  # compute unix_epoc
+    df['timestamps_utc'] = pd.to_datetime(df['timestamps_utc'], unit='s')
     return df
 
 
@@ -63,7 +72,7 @@ def round_and_scale_kWh(df):
 
 
 def aggregate_and_write_excel(df):
-    df = df.set_index('timestamp_utc').resample('15T').sum()   # Aggregate to 15-minute intervals
+    df = df.set_index('timestamps_utc').resample('15T').sum()   # Aggregate to 15-minute intervals
     df['time'] = df.index.strftime('%H:%M')
     df['year_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%Y')   # fix time zone
     df['month_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%m').astype(int)   # fix time zone

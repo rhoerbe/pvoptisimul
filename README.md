@@ -11,7 +11,7 @@ Ein Aggregation auf 15min geht auch nicht.
 Daten für einen Monat holen:
 1. Aufruf der Jahresstatistik im Web Browser  mit der Darstellung "Photovoltaik, Netzbezug / Netzeinspeisung"
 2. Mittels Developer Tools im Browser den letzten Aufruf auf https://optimierung.joulie.at/api/v3/properties/60001906/combined_devices/history/ suchen.
-3. Mit curl oder Postman den Request nachbauen. Es müssen der Authorization Header und die Cookies USER_SESSION_member_space und csrftoken übernommen werden
+3. Mit curl oder Postman den Request nachbauen. Es muss der Authorization Header übernommen werden; Cookies sind nicht erforderlich.
 4. Den GET request testen - da sollten die Monatssummen als JSON zurückkommen
 5. Den Request ändern, indem den URL-Parameter resolution von "M" auf "5m" gesetzt wird.
 6. Das Ergebins speichern und als Input für das main.py Script verwenden
