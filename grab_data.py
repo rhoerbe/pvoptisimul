@@ -3,8 +3,9 @@ import os
 import requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from pathlib import Path
 
-
+DEBUG = False
 ACCESSTOKEN = os.environ['ACCESSTOKEN']
 BASE_URL = os.environ['BASE_URL']
 # Define the URL and authorize header for the Joulie API
@@ -15,7 +16,7 @@ headers = {
 }
 
 # Define the start and end date of the year
-start_dt = datetime(2022, 1, 1)
+start_dt = datetime(2020, 8, 1)
 end_dt = datetime(2022, 12, 31)
 
 # Define the time range in unix time format
@@ -37,11 +38,19 @@ first_start = last_end = None
 
 # Send GET request and add result to merged_data
 for start, end in time_range:
-    response = requests.get(url.format(start, end), headers=headers)
+    (start_ms, end_ms) = (start*1000, end*1000)
+    url_formatted = url.format(start_ms, end_ms)
+    response = requests.get(url_formatted, headers=headers)
     if response.ok:
         r = response.json()['response']
         number_of_samples = len(r['timestamps'])
-        print(f"{number_of_samples} samples in {datetime.fromtimestamp(start).isoformat()} - {datetime.fromtimestamp(end).isoformat()}")
+        print(f"{number_of_samples} samples in {datetime.fromtimestamp(start).isoformat()}/{start} - {datetime.fromtimestamp(end).isoformat()}/{end}")
+        if DEBUG:
+            fp = Path('data') / datetime.fromtimestamp(start).strftime('%Y%m%d.json')
+            with open(fp, 'w') as f:
+                json.dump(r, f)
+            print(f"GET {url_formatted}")
+            print(f"response: start={r['start']}, end={r['end']}")
         if not merged_data:
             merged_data = r # copy initial object
             first_start = r['start']
