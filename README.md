@@ -1,4 +1,4 @@
-# Import detailierter Daten von Joulie.at
+# Photovoltaik Auswertung und Simulation
 
 Das Web Interface vom optimierung.joulie.at exportiert Daten nicht unter der Auflösung eines Tages.
 Um sich ein Lastprofil zu erstellen, kann man mit der API die detaillierten Daten holen.

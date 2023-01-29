@@ -1,12 +1,11 @@
 import json
 import pandas as pd
-import pytz
 from datetime import datetime
 from pathlib import Path
 
 
 basepath = Path(r"data")
-INPATH = Path(basepath) / "grab.json"
+INPATH = Path(basepath) / "grab_tiko.json"
 OUTPATH = Path(basepath) / "timeseries.xlsx"
 
 def main():
@@ -17,7 +16,8 @@ def main():
         df = pd.DataFrame.from_dict(subset)
         df = compute_timestamp(df, start_epoc, api_result)
         df = round_and_scale_kWh(df)
-        aggregate_and_write_excel(df)
+        aggregate_and_compute(df)
+        df.to_excel(OUTPATH, index=True)
         # reporting -----------
         start = datetime.fromtimestamp(start_epoc).isoformat()
         end = datetime.fromtimestamp(api_result['response']['end'] / 1000).isoformat()
@@ -47,7 +47,7 @@ def make_subset_with_pretty_names(api_result: dict) -> dict:
 
 def compute_timestamp(df: pd.DataFrame, start: int, api_result: dict) -> pd.DataFrame:
     if 'timestamps_utc' in df.columns:
-        # timestamps already set by grab_data.py
+        # timestamps already set by grab_tiko_data.py
         pass
     else:
         # timestamps as returned by the API with weird counter offset -> correct it
@@ -61,7 +61,7 @@ def compute_timestamp(df: pd.DataFrame, start: int, api_result: dict) -> pd.Data
     return df
 
 
-def round_and_scale_kWh(df):
+def round_and_scale_kWh(df) -> pd.DataFrame:
     df['Netzbezug'] = df['Netzbezug'].round()
     df['Netzbezug'] /= 1000
     df['PV_Produktion'] = df['PV_Produktion'].round()
@@ -71,14 +71,13 @@ def round_and_scale_kWh(df):
     return df
 
 
-def aggregate_and_write_excel(df):
+def aggregate_and_compute(df) -> pd.DataFrame:
     df = df.set_index('timestamps_utc').resample('15T').sum()   # Aggregate to 15-minute intervals
     df['time'] = df.index.strftime('%H:%M')
     df['year_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%Y')   # fix time zone
     df['month_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%m').astype(int)   # fix time zone
     lookup_dict = {1:'W', 2:'W', 3:'W', 4:'Ü',5:'Ü', 6:'S',7:'S', 8:'S',9:'Ü', 10:'Ü', 11: 'W', 12: 'W'}
     df['season'] = df['month_loc'].map(lookup_dict)
-    df.to_excel(OUTPATH, index=True)
 
 
 # Press the green button in the gutter to run the script.
