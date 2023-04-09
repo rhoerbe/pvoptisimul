@@ -1,6 +1,5 @@
 import json
 import pandas as pd
-import pytz
 from datetime import datetime
 from pathlib import Path
 
@@ -17,10 +16,10 @@ def main():
         df = pd.DataFrame.from_dict(subset)
         df = compute_timestamp(df, start_epoc, tiko_result)
         df = round_and_scale_kWh(df)
-        aggregate_enahance_and_write_excel(df)
+        aggregate_enhance_and_write_excel(df)
         # reporting -----------
         start = datetime.fromtimestamp(start_epoc).isoformat()
-        end = datetime.fromtimestamp(tiko_result['response']['end'] / 1000).isoformat()
+        end = datetime.fromtimestamp(tiko_result['response']['end']).isoformat()
         resolution = tiko_result['response']['resolution']
         count = df['timestamps_utc'].count()
         missing = df['missing_data'].count()
@@ -47,7 +46,7 @@ def make_subset_with_pretty_names(api_result: dict) -> dict:
 
 def compute_timestamp(df: pd.DataFrame, start: int, api_result: dict) -> pd.DataFrame:
     if 'timestamps_utc' in df.columns:
-        # timestamps already set by grab_data.py
+        # timestamps already set by extract_tiko_data.py
         pass
     else:
         # timestamps as returned by the API with weird counter offset -> correct it
@@ -62,24 +61,27 @@ def compute_timestamp(df: pd.DataFrame, start: int, api_result: dict) -> pd.Data
 
 
 def round_and_scale_kWh(df) -> pd.DataFrame:
-    df['Netzbezug'] = df['Netzbezug'].round()
-    df['Netzbezug'] /= 1000
-    df['PV_Produktion'] = df['PV_Produktion'].round()
-    df['PV_Produktion'] /= 1000
-    df['Eigenverbrauch'] = df['Eigenverbrauch'].round()
-    df['Eigenverbrauch'] /= 1000
+    #df['Netzbezug'] /= 1000
+    #df['PV_Produktion'] /= 1000
+    #df['Eigenverbrauch'] /= 1000
     return df
 
 
-def aggregate_enahance_and_write_excel(df):
-    df = df.set_index('timestamps_utc').resample('15T').sum()   # Aggregate to 15-minute intervals
-    df['Diff_Prod_Bezug'] = df['PV_Produktion'] - df['Netzbezug']
-    df['time'] = df.index.strftime('%H:%M')
-    df['year_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%Y')   # fix time zone
-    df['month_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%m').astype(int)   # fix time zone
-    df['time_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%h:M').astype(int)   # fix time zone
-    lookup_dict = {1:'W', 2:'W', 3:'W', 4:'Ü',5:'Ü', 6:'S',7:'S', 8:'S',9:'Ü', 10:'Ü', 11: 'W', 12: 'W'}
-    df['season'] = df['month_loc'].map(lookup_dict)
+def aggregate_enhance_and_write_excel(df):
+    df = df.set_index('timestamps_utc')
+    df = df.drop('missing_data', axis=1)
+    #df = df.resample('15T').sum()   # Aggregate to 15-minute intervals
+    #df['Diff_Prod_Bezug'] = df['PV_Produktion'] - df['Netzbezug']
+    # to make data comparable between months, the time zone is considered, but daylight saving time is ignored
+    df['time_loc'] = (df.index  + pd.DateOffset(hours=1)).strftime('%H:%M')
+    df['year_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%Y')
+    df['month_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%m').astype(int)
+    df['day_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%d').astype(int)
+    df['hour_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%H')
+    df['min_loc'] = (df.index + pd.DateOffset(hours=1)).strftime('%M')
+    #lookup_dict = {1:'W', 2:'W', 3:'W', 4:'Ü', 5:'S', 6:'S', 7:'S', 8:'S', 9:'Ü', 10:'Ü', 11: 'W', 12: 'W'}
+    #df['season'] = df['month_loc'].map(lookup_dict)
+    #df['Eigennutzung'] = df['Eigenverbrauch'] / df['PV_Produktion']
     df.to_excel(OUTPATH, index=True)
 
 
