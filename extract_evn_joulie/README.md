@@ -31,6 +31,8 @@ Daten für einen Monat holen:
    1. ACCESSTOKEN auf den Wert des Authorization Headers
    2. BASE_URL auf den oben ermittelten Wert (enthält die Kundennummer) 
    3. START_DATE und END_DATE im Format YYYY-MM-DD 
+   4. DEVICEID (combined ist für Erzeugung und Verbrauch, Wäremepumpe ist ein drittes Gerät)
+   5. COOKIE (cfrs token etc)
 4. Das Ergebins speichern und als Input für das Hauptprojekt verwenden
 
 

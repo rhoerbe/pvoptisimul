@@ -24,6 +24,7 @@ class Config:
             self.DEVICEID = os.environ['DEVICEID']
             self.START_DATE = os.environ['START_DATE']
             self.END_DATE = os.environ['END_DATE']
+            self.COOKIE = os.environ['COOKIE']   #csrftokem, cookieconsert_dismissed; USER_SESSION_memeber_space
         except KeyError:
             print("Required environment variables: ACCESSTOKEN, BASE_URL, DEVICEID, END_DATE, START_DATE", file=sys.stderr)
             sys.exit(1)
@@ -32,7 +33,8 @@ class Config:
         self.url12 = self.BASE_URL + "/combined_devices/history/?start={}&end={}&resolution=5m"
         self.url3 = self.BASE_URL + "/devices/" + self.DEVICEID + "/history/?start={}&end={}&resolution=5m"
         self.headers = {
-            'Authorization': self.ACCESSTOKEN
+            'Authorization': self.ACCESSTOKEN,
+            'Cookie': self.COOKIE
         }
         self.OUTPUTFILE = Path('data/grab_tiko.json')
         self.OUTPUTFILE.parent.mkdir(parents=False, exist_ok=True)
@@ -71,6 +73,8 @@ class ApiHandler():
             response12 = requests.get(url12_formatted, headers=conf.headers)
             if not response12.ok:
                 print(f"GET {response12.url} returned HTTP {response12.status_code}")
+                for key, value in response12.request.headers.items():
+                    print(f"{key}: {value}")
                 raise ValueError(response12.text)
             response3 = requests.get(url3_formatted, headers=conf.headers)
             if not response3.ok:
